@@ -46,6 +46,24 @@ class Song
 
 	public static function loadFromJson(jsonInput:String, ?folder:String):SwagSong
 	{
+		#if mobile
+		// Charts saved by the Chart Editor to external storage take priority
+		// over the ones bundled in the APK, so edits are actually playable.
+		var external:SwagSong = loadExternal(jsonInput);
+
+		if (external == null)
+		{
+			// A chart saved once in the editor is used for every difficulty.
+			var base:String = jsonInput.toLowerCase();
+			for (suffix in ['-easy', '-hard'])
+				if (base.endsWith(suffix))
+					external = loadExternal(base.substr(0, base.length - suffix.length));
+		}
+
+		if (external != null)
+			return external;
+		#end
+
 		var rawJson = Assets.getText(Paths.json(folder.toLowerCase() + '/' + jsonInput.toLowerCase())).trim();
 
 		while (!rawJson.endsWith("}"))
@@ -72,6 +90,31 @@ class Song
 
 		return parseJSONshit(rawJson);
 	}
+
+	#if mobile
+	public static function loadExternal(jsonInput:String):SwagSong
+	{
+		try
+		{
+			var rawJson:String = AndroidStorage.readChart(jsonInput);
+
+			if (rawJson == null || rawJson.trim() == "")
+				return null;
+
+			var swagShit:SwagSong = parseJSONshit(rawJson.trim());
+
+			if (swagShit == null || swagShit.notes == null)
+				return null;
+
+			return swagShit;
+		}
+		catch (e:Dynamic)
+		{
+			trace('[Song] External chart invalid for ' + jsonInput + ': ' + Std.string(e));
+			return null;
+		}
+	}
+	#end
 
 	public static function parseJSONshit(rawJson:String):SwagSong
 	{

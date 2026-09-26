@@ -25,7 +25,12 @@ class MobileKeyboard
 
     public function new()
     {
-        if (FlxG.stage != null)
+        resolveWindow();
+    }
+
+    private function resolveWindow():Void
+    {
+        if (window == null && FlxG.stage != null)
             window = FlxG.stage.window;
     }
 
@@ -37,6 +42,8 @@ class MobileKeyboard
      */
     public function open(initialText:String, callback:String->Void):Void
     {
+        resolveWindow();
+
         if (window == null)
             return;
 
