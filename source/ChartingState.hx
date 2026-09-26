@@ -434,7 +434,10 @@ class ChartingState extends MusicBeatState
       var currentText:String = "";
   
       if (typingShit != null && typingShit.text != null)
+      {
           currentText = typingShit.text;
+          typingShit.hasFocus = false;
+      }
   
       mobileKeyboard.open(currentText, function(value:String)
       {
@@ -887,7 +890,7 @@ class ChartingState extends MusicBeatState
     if (FlxG.mouse.x > gridBG.x
 		    && FlxG.mouse.x < gridBG.x + gridBG.width
 		    && FlxG.mouse.y > gridBG.y
-		    && FlxG.mouse.y < gridBG.y + (GRID_SIZE * _song.notes[curBar].lengthInSteps))
+		    && FlxG.mouse.y < gridBG.y + (GRID_SIZE * _song.notes[curSection].lengthInSteps))
 		{
 		    dummyArrow.x = Math.floor(FlxG.mouse.x / GRID_SIZE) * GRID_SIZE;
 		    if (FlxG.keys.pressed.SHIFT)
@@ -921,7 +924,7 @@ class ChartingState extends MusicBeatState
 		        if (FlxG.mouse.x > gridBG.x
 		            && FlxG.mouse.x < gridBG.x + gridBG.width
 		            && FlxG.mouse.y > gridBG.y
-		            && FlxG.mouse.y < gridBG.y + (GRID_SIZE * _song.notes[curBar].lengthInSteps))
+		            && FlxG.mouse.y < gridBG.y + (GRID_SIZE * _song.notes[curSection].lengthInSteps))
 		        {
 		            FlxG.log.add('added note');
 		            addNote();

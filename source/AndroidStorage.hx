@@ -6,9 +6,13 @@ import sys.io.File;
 #end
 
 #if android
+import androidmanager.content.Interface;
+import androidmanager.os.Build.VERSION;
 import androidmanager.os.Environment;
 import androidmanager.tools.PermissionUtils;
 #end
+
+using StringTools;
 
 /**
  * External storage used ONLY by the Chart Editor.
@@ -67,14 +71,58 @@ class AndroidStorage
         }
     }
 
+    static var permissionFlowStarted:Bool = false;
+
+    /**
+     * Tries to initialize the storage and, if that fails on Android,
+     * asks the user for the permission the current Android version needs.
+     */
+    public static function startPermissionFlow():Void
+    {
+        if (init() || permissionFlowStarted)
+            return;
+
+        permissionFlowStarted = true;
+
+        #if android
+        if (VERSION.SDK_INT >= 30)
+        {
+            if (!Environment.isExternalStorageManager())
+                requestAllFilesAccess();
+            return;
+        }
+
+        requestWritePermission();
+
+        haxe.Timer.delay(function():Void
+        {
+            if (!available && PermissionUtils.hasPermission("WRITE_EXTERNAL_STORAGE"))
+                init();
+        }, 1500);
+        #end
+    }
+
     #if android
     public static function requestWritePermission():Void
     {
         try
         {
             PermissionUtils.requestPermissions([
+                "android.permission.READ_EXTERNAL_STORAGE",
                 "android.permission.WRITE_EXTERNAL_STORAGE"
             ]);
+        }
+        catch (e:Dynamic)
+        {
+            // Permission failure must never crash the game.
+        }
+    }
+
+    static function requestAllFilesAccess():Void
+    {
+        try
+        {
+            Interface.requestSetting("MANAGE_APP_ALL_FILES_ACCESS_PERMISSION");
         }
         catch (e:Dynamic)
         {
