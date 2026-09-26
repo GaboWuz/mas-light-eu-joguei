@@ -12,6 +12,9 @@ import openfl.Lib;
 import openfl.display.FPS;
 import openfl.display.Sprite;
 import openfl.events.Event;
+#if android
+import AndroidStorage;
+#end
 
 class Main extends Sprite
 {
@@ -38,6 +41,17 @@ class Main extends Sprite
 	public function new()
 	{
 		super();
+
+    #if android
+    try
+    {
+        AndroidStorage.init();
+    }
+    catch (e:Dynamic)
+    {
+        trace("External chart storage unavailable: " + e);
+    }
+    #end
 
 		if (stage != null)
 		{

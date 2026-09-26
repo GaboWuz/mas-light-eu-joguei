@@ -80,7 +80,12 @@ class ChartingState extends MusicBeatState
 	var _song:SwagSong;
 
 	var typingShit:FlxInputText;
-	/*
+
+  #if mobile
+  var mobileKeyboard:MobileKeyboard;
+  #end
+  
+  /*
 	 * WILL BE THE CURRENT / LAST PLACED NOTE
 	**/
 	var curSelectedNote:Array<Dynamic>;
@@ -203,13 +208,9 @@ class ChartingState extends MusicBeatState
 		add(blackBorder);
     add(snapText);
     
-    #if mobile
-    addMControls();
-    if (mcontrols != null)
-        mcontrols.visible = true;
-    
-    addVPad(NONE, A_B);
-    addVPadCamera();
+    #if mobile 
+    addVPad(FULL, A_B_C_X_Y);
+    mobileKeyboard = new MobileKeyboard();
     #end
     
     super.create();
@@ -245,6 +246,13 @@ class ChartingState extends MusicBeatState
 		{
 			saveLevel();
 		});
+
+    #if mobile
+    var keyboardButton:FlxButton = new FlxButton(110, 38, "Keyboard", function()
+    {
+        openMobileKeyboard();
+    });
+    #end
 
 		var reloadSong:FlxButton = new FlxButton(saveButton.x + saveButton.width + 10, saveButton.y, "Reload Audio", function()
 		{
@@ -409,6 +417,35 @@ class ChartingState extends MusicBeatState
 
 		FlxG.camera.follow(strumLine);
 	}
+
+  #if mobile
+  function openMobileKeyboard():Void
+  {
+      if (mobileKeyboard == null)
+          mobileKeyboard = new MobileKeyboard();
+  
+      // Pressing the button again closes it.
+      if (mobileKeyboard.isOpen())
+      {
+          mobileKeyboard.close();
+          return;
+      }
+  
+      var currentText:String = "";
+  
+      if (typingShit != null && typingShit.text != null)
+          currentText = typingShit.text;
+  
+      mobileKeyboard.open(currentText, function(value:String)
+      {
+          if (typingShit != null)
+              typingShit.text = value;
+  
+          if (_song != null)
+              _song.song = value;
+      });
+  }
+  #end
 
 	var stepperLength:FlxUINumericStepper;
 	var check_mustHitSection:FlxUICheckBox;
@@ -706,7 +743,9 @@ class ChartingState extends MusicBeatState
 			doSnapShit = !doSnapShit;
 
 		Conductor.songPosition = FlxG.sound.music.time;
-		_song.song = typingShit.text;
+
+    if (typingShit != null)
+        _song.song = typingShit.text;
 
 		var left = FlxG.keys.justPressed.ONE;
 		var down = FlxG.keys.justPressed.TWO;
@@ -845,92 +884,52 @@ class ChartingState extends MusicBeatState
 		FlxG.watch.addQuick('daBeat', curBeat);
 		FlxG.watch.addQuick('daStep', curStep);
 
-    #if mobile
-    var mobileEditorTouch:Bool = false;
-    
-    for (touch in FlxG.touches.list)
-    {
-        if (!touch.justPressed)
-            continue;
-    
-        mobileEditorTouch = true;
-        var tx:Float = touch.x;
-        var ty:Float = touch.y;
-    
-        if (tx > gridBG.x
-            && tx < gridBG.x + gridBG.width
-            && ty > gridBG.y
-            && ty < gridBG.y + (GRID_SIZE * _song.notes[curSection].lengthInSteps))
-        {
-            var touchedNote:Note = null;
-    
-            curRenderedNotes.forEach(function(note:Note)
-            {
-                if (touchedNote == null
-                    && tx >= note.x && tx <= note.x + note.width
-                    && ty >= note.y && ty <= note.y + note.height)
-                    touchedNote = note;
-            });
-    
-            if (touchedNote != null)
-            {
-                deleteNote(touchedNote);
-            }
-            else
-            {
-                dummyArrow.x = Math.floor(tx / GRID_SIZE) * GRID_SIZE;
-                dummyArrow.y = Math.floor(ty / GRID_SIZE) * GRID_SIZE;
-                addNote();
-            }
-        }
+    if (FlxG.mouse.x > gridBG.x
+		    && FlxG.mouse.x < gridBG.x + gridBG.width
+		    && FlxG.mouse.y > gridBG.y
+		    && FlxG.mouse.y < gridBG.y + (GRID_SIZE * _song.notes[curBar].lengthInSteps))
+		{
+		    dummyArrow.x = Math.floor(FlxG.mouse.x / GRID_SIZE) * GRID_SIZE;
+		    if (FlxG.keys.pressed.SHIFT)
+		        dummyArrow.y = FlxG.mouse.y;
+		    else
+		        dummyArrow.y = Math.floor(FlxG.mouse.y / GRID_SIZE) * GRID_SIZE;
+		}
+		
+		if (FlxG.mouse.justPressed)
+		{
+		    if (FlxG.mouse.overlaps(curRenderedNotes))
+		    {
+		        curRenderedNotes.forEach(function(note:Note)
+		        {
+		            if (FlxG.mouse.overlaps(note))
+		            {
+		                if (FlxG.keys.pressed.CONTROL)
+		                {
+		                    selectNote(note);
+		                }
+		                else
+		                {
+		                    trace('tryin to delete note...');
+		                    deleteNote(note);
+		                }
+		            }
+		        });
+		    }
+		    else
+		    {
+		        if (FlxG.mouse.x > gridBG.x
+		            && FlxG.mouse.x < gridBG.x + gridBG.width
+		            && FlxG.mouse.y > gridBG.y
+		            && FlxG.mouse.y < gridBG.y + (GRID_SIZE * _song.notes[curBar].lengthInSteps))
+		        {
+		            FlxG.log.add('added note');
+		            addNote();
+		        }
+		    }
     }
-    #end
 
-		if (FlxG.mouse.justPressed #if mobile && !mobileEditorTouch #end)
-		{
-			if (FlxG.mouse.overlaps(curRenderedNotes))
-			{
-				curRenderedNotes.forEach(function(note:Note)
-				{
-					if (FlxG.mouse.overlaps(note))
-					{
-						if (FlxG.keys.pressed.CONTROL)
-						{
-							selectNote(note);
-						}
-						else
-						{
-							deleteNote(note);
-						}
-					}
-				});
-			}
-			else
-			{
-				if (FlxG.mouse.x > gridBG.x
-					&& FlxG.mouse.x < gridBG.x + gridBG.width
-					&& FlxG.mouse.y > gridBG.y
-					&& FlxG.mouse.y < gridBG.y + (GRID_SIZE * _song.notes[curSection].lengthInSteps))
-				{
-					FlxG.log.add('added note');
-					addNote();
-				}
-			}
-		}
-
-		if (FlxG.mouse.x > gridBG.x
-			&& FlxG.mouse.x < gridBG.x + gridBG.width
-			&& FlxG.mouse.y > gridBG.y
-			&& FlxG.mouse.y < gridBG.y + (GRID_SIZE * _song.notes[curSection].lengthInSteps))
-		{
-			dummyArrow.x = Math.floor(FlxG.mouse.x / GRID_SIZE) * GRID_SIZE;
-			if (FlxG.keys.pressed.SHIFT)
-				dummyArrow.y = FlxG.mouse.y;
-			else
-				dummyArrow.y = Math.floor(FlxG.mouse.y / GRID_SIZE) * GRID_SIZE;
-		}
-
-		if (FlxG.keys.justPressed.ENTER)
+		if (FlxG.keys.justPressed.ENTER #if mobile || vPad.buttonA.justPressed #end)
 		{
 			lastSection = curSection;
 
@@ -940,11 +939,11 @@ class ChartingState extends MusicBeatState
 			LoadingState.loadAndSwitchState(new PlayState());
 		}
 
-		if (FlxG.keys.justPressed.E)
+		if (FlxG.keys.justPressed.E #if mobile || vPad.buttonY.justPressed #end)
 		{
 			changeNoteSustain(Conductor.stepCrochet);
 		}
-		if (FlxG.keys.justPressed.Q)
+		if (FlxG.keys.justPressed.Q #if mobile || vPad.buttonX.justPressed #end)
 		{
 			changeNoteSustain(-Conductor.stepCrochet);
 		}
@@ -996,12 +995,12 @@ class ChartingState extends MusicBeatState
 				shiftThing = 4;
 			if (!FlxG.keys.pressed.CONTROL)
 			{
-				if (FlxG.keys.justPressed.RIGHT || FlxG.keys.justPressed.D || controls.RIGHT_P)
+				if (FlxG.keys.justPressed.RIGHT #if mobile || vPad.buttonRight.justPressed #end || FlxG.keys.justPressed.D || controls.RIGHT_P)
             changeSection(curSection + shiftThing);
-        if (FlxG.keys.justPressed.LEFT || FlxG.keys.justPressed.A || controls.LEFT_P)
+        if (FlxG.keys.justPressed.LEFT #if mobile || vPad.buttonLeft.justPressed #end || FlxG.keys.justPressed.A || controls.LEFT_P)
             changeSection(curSection - shiftThing);
 			}	
-			if (FlxG.keys.justPressed.SPACE #if mobile || controls.ACCEPT #end)
+			if (FlxG.keys.justPressed.SPACE #if mobile || vPad.buttonC.justPressed #end)
 			{
 				if (FlxG.sound.music.playing)
 				{
@@ -1050,7 +1049,7 @@ class ChartingState extends MusicBeatState
 
 			if (!FlxG.keys.pressed.SHIFT)
 			{
-				if (FlxG.keys.pressed.W || FlxG.keys.pressed.S)
+				if (FlxG.keys.pressed.W #if mobile || vPad.buttonUp.pressed #end || FlxG.keys.pressed.S #if mobile || vPad.buttonDown.pressed #end)
 				{
 					FlxG.sound.music.pause();
 					vocals.pause();
@@ -1058,7 +1057,7 @@ class ChartingState extends MusicBeatState
 
 					var daTime:Float = 700 * FlxG.elapsed;
 
-					if (FlxG.keys.pressed.W)
+					if (FlxG.keys.pressed.W #if mobile || vPad.buttonUp.pressed #end)
 					{
 						FlxG.sound.music.time -= daTime;
 					}
@@ -1070,7 +1069,7 @@ class ChartingState extends MusicBeatState
 			}
 			else
 			{
-				if (FlxG.keys.justPressed.W || FlxG.keys.justPressed.S)
+				if (FlxG.keys.justPressed.W #if mobile || vPad.buttonUp.justPressed #end || FlxG.keys.justPressed.S #if mobile || vPad.buttonDown.justPressed #end)
 				{
 					FlxG.sound.music.pause();
 					vocals.pause();
@@ -1105,6 +1104,19 @@ class ChartingState extends MusicBeatState
 			+ curStep;
 		super.update(elapsed);
 	}
+
+  #if mobile
+  override function destroy():Void
+  {
+      if (mobileKeyboard != null)
+      {
+          mobileKeyboard.destroy();
+          mobileKeyboard = null;
+      }
+  
+      super.destroy();
+  }
+  #end
 
 	function changeNoteSustain(value:Float):Void
 	{
@@ -1537,28 +1549,37 @@ class ChartingState extends MusicBeatState
 	}
 
 	function loadJson(song:String):Void
-  {
-      #if mobile
-      var external:String = AndroidStorage.readChart(song);
-  
-      if (external != null && external.length > 0)
-      {
-          try
-          {
-              PlayState.SONG = Song.parseJSONshit(external);
-              LoadingState.loadAndSwitchState(new ChartingState());
-              return;
-          }
-          catch (e:Dynamic)
-          {
-              trace('[ChartingState] External chart invalid: ' + Std.string(e));
-          }
-      }
-      #end
-  
-      PlayState.SONG = Song.loadFromJson(song.toLowerCase(), song.toLowerCase());
-      LoadingState.loadAndSwitchState(new ChartingState());
-  }
+	{
+		#if mobile
+		// AndroidStorage is only used for Chart Editor JSON files.
+		// It does not turn the engine into a mods/external-assets system.
+		try
+		{
+			var external:String = AndroidStorage.readChart(song);
+
+			if (external != null && external.length > 0)
+			{
+				try
+				{
+					PlayState.SONG = Song.parseJSONshit(external);
+					LoadingState.loadAndSwitchState(new ChartingState());
+					return;
+				}
+				catch (e:Dynamic)
+				{
+					trace('[ChartingState] External chart invalid: ' + Std.string(e));
+				}
+			}
+		}
+		catch (e:Dynamic)
+		{
+			trace('[ChartingState] Could not read external chart: ' + Std.string(e));
+		}
+		#end
+
+		PlayState.SONG = Song.loadFromJson(song.toLowerCase(), song.toLowerCase());
+		LoadingState.loadAndSwitchState(new ChartingState());
+	}
 
 	function loadAutosave():Void
 	{
@@ -1575,36 +1596,69 @@ class ChartingState extends MusicBeatState
 	}
 
 	private function saveLevel()
-{
-    var json = {
-        "song": _song
-    };
+	{
+		var json = {
+			"song": _song
+		};
 
-    var data:String = Json.stringify(json);
+		var data:String = Json.stringify(json);
 
-    if (data == null || data.length == 0)
-        return;
+		if (data == null || data.length == 0)
+			return;
 
-    #if mobile
-    if (!AndroidStorage.available)
-    {
-        AndroidStorage.startPermissionFlow();
-        trace('[ChartingState] External storage not ready. Grant access and press Save again.');
-        return;
-    }
+		#if mobile
+		// Current AndroidStorage API: initialize the chart-only external folder
+		// and request WRITE access only when the user actually saves.
+		var storageReady:Bool = false;
 
-    if (AndroidStorage.writeChart(_song.song, data.trim()))
-        trace('[ChartingState] Chart saved to KadeEngine/mods/data/' + _song.song.toLowerCase() + '/' + _song.song.toLowerCase() + '.json');
-    else
-        trace('[ChartingState] Could not save chart to external storage.');
-    #else
-    _file = new FileReference();
-    _file.addEventListener(Event.COMPLETE, onSaveComplete);
-    _file.addEventListener(Event.CANCEL, onSaveCancel);
-    _file.addEventListener(IOErrorEvent.IO_ERROR, onSaveError);
-    _file.save(data.trim(), _song.song.toLowerCase() + '.json');
-    #end
-}
+		try
+		{
+			storageReady = AndroidStorage.init();
+		}
+		catch (e:Dynamic)
+		{
+			trace('[ChartingState] External chart storage init failed: ' + Std.string(e));
+		}
+
+		if (!storageReady)
+		{
+			#if android
+			try
+			{
+				AndroidStorage.requestWritePermission();
+			}
+			catch (e:Dynamic)
+			{
+				trace('[ChartingState] Could not request external storage permission: ' + Std.string(e));
+			}
+			#end
+
+			trace('[ChartingState] External chart storage is not ready. Grant access and press Save again.');
+			return;
+		}
+
+		try
+		{
+			if (AndroidStorage.writeChart(_song.song, data.trim()))
+			{
+				trace('[ChartingState] Chart saved to: ' + AndroidStorage.chartPath(_song.song));
+				return;
+			}
+		}
+		catch (e:Dynamic)
+		{
+			trace('[ChartingState] External chart save failed: ' + Std.string(e));
+		}
+
+		trace('[ChartingState] Could not save chart to external storage.');
+	#else
+		_file = new FileReference();
+		_file.addEventListener(Event.COMPLETE, onSaveComplete);
+		_file.addEventListener(Event.CANCEL, onSaveCancel);
+		_file.addEventListener(IOErrorEvent.IO_ERROR, onSaveError);
+		_file.save(data.trim(), _song.song.toLowerCase() + '.json');
+		#end
+	}
 
   #if !mobile
 	function onSaveComplete(_):Void
