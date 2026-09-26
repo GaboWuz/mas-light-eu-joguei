@@ -76,6 +76,29 @@ class Main extends Sprite
 		game = new FlxGame(gameWidth, gameHeight, initialState, #if (flixel < "5.0.0") zoom, #end framerate, framerate, skipSplash, startFullscreen);
 
 		addChild(game);
+
+    #if android
+    haxe.Timer.delay(function():Void
+    {
+        try
+        {
+            AndroidStorage.startPermissionFlow();
+        }
+        catch (e:Dynamic)
+        {
+            trace('[AndroidStorage] External storage unavailable: ' + Std.string(e));
+        }
+    }, 1000);
+    #else
+    try
+    {
+        AndroidStorage.init();
+    }
+    catch (e:Dynamic)
+    {
+        trace('[AndroidStorage] Optional storage unavailable: ' + Std.string(e));
+    }
+    #end
 		
 		fpsCounter = new FPS(10, 3, 0xFFFFFF);
 		addChild(fpsCounter);

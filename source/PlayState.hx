@@ -302,7 +302,11 @@ class PlayState extends MusicBeatState
 		persistentDraw = true;
 
 		if (SONG == null)
-			SONG = Song.loadFromJson('tutorial');
+    {
+        trace('[PlayState] SONG is null. Returning to Freeplay instead of loading Tutorial.');
+        FlxG.switchState(new FreeplayState());
+        return;
+    }
 
 		Conductor.mapBPMChanges(SONG);
 		Conductor.changeBPM(SONG.bpm);
@@ -730,10 +734,27 @@ class PlayState extends MusicBeatState
 				gfVersion = 'gf';
 		}
 
-		gf = new Character(400, 130, gfVersion);
-		gf.scrollFactor.set(0.95, 0.95);
-
-		dad = new Character(100, 100, SONG.player2);
+		try
+    {
+        gf = new Character(400, 130, gfVersion);
+    }
+    catch (e:Dynamic)
+    {
+        trace('[PlayState] Invalid GF: ' + gfVersion + ' — using gf.');
+        gf = new Character(400, 130, 'gf');
+    }
+    
+    gf.scrollFactor.set(0.95, 0.95);
+    
+    try
+    {
+        dad = new Character(100, 100, SONG.player2);
+    }
+    catch (e:Dynamic)
+    {
+        trace('[PlayState] Invalid opponent: ' + SONG.player2 + ' — using dad.');
+        dad = new Character(100, 100, 'dad');
+    }
 
 		var camPos:FlxPoint = new FlxPoint(dad.getGraphicMidpoint().x, dad.getGraphicMidpoint().y);
 
@@ -777,7 +798,15 @@ class PlayState extends MusicBeatState
 
 
 		
-		boyfriend = new Boyfriend(770, 450, SONG.player1);
+		try
+    {
+        boyfriend = new Boyfriend(770, 450, SONG.player1);
+    }
+    catch (e:Dynamic)
+    {
+        trace('[PlayState] Invalid boyfriend: ' + SONG.player1 + ' — using bf.');
+        boyfriend = new Boyfriend(770, 450, 'bf');
+    }
 
 		// REPOSITIONING PER STAGE
 		switch (curStage)

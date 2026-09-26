@@ -29,19 +29,21 @@ import flixel.ui.FlxSpriteButton;
 import flixel.util.FlxColor;
 import haxe.Json;
 import lime.utils.Assets;
+#if !mobile
 import openfl.events.Event;
-import openfl.events.IOErrorEvent;
-import openfl.events.IOErrorEvent;
 import openfl.events.IOErrorEvent;
 import openfl.media.Sound;
 import openfl.net.FileReference;
 import openfl.utils.ByteArray;
+#end
 
 using StringTools;
 
 class ChartingState extends MusicBeatState
 {
-	var _file:FileReference;
+	#if !mobile
+  var _file:FileReference;
+  #end
 
 	public var playClaps:Bool = false;
 
@@ -199,11 +201,18 @@ class ChartingState extends MusicBeatState
 		add(curRenderedSustains);
 
 		add(blackBorder);
-		add(snapText);
-
-
-
-		super.create();
+    add(snapText);
+    
+    #if mobile
+    addMControls();
+    if (mcontrols != null)
+        mcontrols.visible = true;
+    
+    addVPad(NONE, A_B);
+    addVPadCamera();
+    #end
+    
+    super.create();
 	}
 
 	function addSongUI():Void
@@ -508,31 +517,45 @@ class ChartingState extends MusicBeatState
 	}
 
 	function loadSong(daSong:String):Void
-	{
-		if (FlxG.sound.music != null)
-		{
-			FlxG.sound.music.stop();
-			// vocals.stop();
-		}
-
-		FlxG.sound.playMusic(Paths.inst(daSong), 0.6);
-
-		// WONT WORK FOR TUTORIAL OR TEST SONG!!! REDO LATER
-		vocals = new FlxSound().loadEmbedded(Paths.voices(daSong));
-		FlxG.sound.list.add(vocals);
-
-		FlxG.sound.music.pause();
-		vocals.pause();
-
-		FlxG.sound.music.onComplete = function()
-		{
-			vocals.pause();
-			vocals.time = 0;
-			FlxG.sound.music.pause();
-			FlxG.sound.music.time = 0;
-			changeSection();
-		};
-	}
+  {
+      if (FlxG.sound.music != null)
+          FlxG.sound.music.stop();
+  
+      try
+      {
+          FlxG.sound.playMusic(Paths.inst(daSong), 0.6);
+      }
+      catch (e:Dynamic)
+      {
+          trace('[ChartingState] Instrumental not found: ' + daSong + ' (' + Std.string(e) + ')');
+          FlxG.sound.music = new FlxSound();
+          FlxG.sound.list.add(FlxG.sound.music);
+      }
+  
+      try
+      {
+          vocals = new FlxSound().loadEmbedded(Paths.voices(daSong));
+      }
+      catch (e:Dynamic)
+      {
+          trace('[ChartingState] Voices not found: ' + daSong + ' (' + Std.string(e) + ')');
+          vocals = new FlxSound();
+      }
+  
+      FlxG.sound.list.add(vocals);
+  
+      FlxG.sound.music.pause();
+      vocals.pause();
+  
+      FlxG.sound.music.onComplete = function()
+      {
+          vocals.pause();
+          vocals.time = 0;
+          FlxG.sound.music.pause();
+          FlxG.sound.music.time = 0;
+          changeSection();
+      };
+  }
 
 	function generateUI():Void
 	{
@@ -822,7 +845,48 @@ class ChartingState extends MusicBeatState
 		FlxG.watch.addQuick('daBeat', curBeat);
 		FlxG.watch.addQuick('daStep', curStep);
 
-		if (FlxG.mouse.justPressed)
+    #if mobile
+    var mobileEditorTouch:Bool = false;
+    
+    for (touch in FlxG.touches.list)
+    {
+        if (!touch.justPressed)
+            continue;
+    
+        mobileEditorTouch = true;
+        var tx:Float = touch.x;
+        var ty:Float = touch.y;
+    
+        if (tx > gridBG.x
+            && tx < gridBG.x + gridBG.width
+            && ty > gridBG.y
+            && ty < gridBG.y + (GRID_SIZE * _song.notes[curSection].lengthInSteps))
+        {
+            var touchedNote:Note = null;
+    
+            curRenderedNotes.forEach(function(note:Note)
+            {
+                if (touchedNote == null
+                    && tx >= note.x && tx <= note.x + note.width
+                    && ty >= note.y && ty <= note.y + note.height)
+                    touchedNote = note;
+            });
+    
+            if (touchedNote != null)
+            {
+                deleteNote(touchedNote);
+            }
+            else
+            {
+                dummyArrow.x = Math.floor(tx / GRID_SIZE) * GRID_SIZE;
+                dummyArrow.y = Math.floor(ty / GRID_SIZE) * GRID_SIZE;
+                addNote();
+            }
+        }
+    }
+    #end
+
+		if (FlxG.mouse.justPressed #if mobile && !mobileEditorTouch #end)
 		{
 			if (FlxG.mouse.overlaps(curRenderedNotes))
 			{
@@ -901,6 +965,17 @@ class ChartingState extends MusicBeatState
 			}
 		}
 
+    #if mobile
+    if (controls.BACK)
+    {
+        FlxG.sound.music.stop();
+        if (vocals != null)
+            vocals.stop();
+        FlxG.switchState(new MainMenuState());
+        return;
+    }
+    #end
+
 		if (!typingShit.hasFocus)
 		{
 
@@ -921,12 +996,12 @@ class ChartingState extends MusicBeatState
 				shiftThing = 4;
 			if (!FlxG.keys.pressed.CONTROL)
 			{
-				if (FlxG.keys.justPressed.RIGHT || FlxG.keys.justPressed.D)
-					changeSection(curSection + shiftThing);
-				if (FlxG.keys.justPressed.LEFT || FlxG.keys.justPressed.A)
-					changeSection(curSection - shiftThing);
+				if (FlxG.keys.justPressed.RIGHT || FlxG.keys.justPressed.D || controls.RIGHT_P)
+            changeSection(curSection + shiftThing);
+        if (FlxG.keys.justPressed.LEFT || FlxG.keys.justPressed.A || controls.LEFT_P)
+            changeSection(curSection - shiftThing);
 			}	
-			if (FlxG.keys.justPressed.SPACE)
+			if (FlxG.keys.justPressed.SPACE #if mobile || controls.ACCEPT #end)
 			{
 				if (FlxG.sound.music.playing)
 				{
@@ -1462,10 +1537,28 @@ class ChartingState extends MusicBeatState
 	}
 
 	function loadJson(song:String):Void
-	{
-		PlayState.SONG = Song.loadFromJson(song.toLowerCase(), song.toLowerCase());
-		LoadingState.loadAndSwitchState(new ChartingState());
-	}
+  {
+      #if mobile
+      var external:String = AndroidStorage.readChart(song);
+  
+      if (external != null && external.length > 0)
+      {
+          try
+          {
+              PlayState.SONG = Song.parseJSONshit(external);
+              LoadingState.loadAndSwitchState(new ChartingState());
+              return;
+          }
+          catch (e:Dynamic)
+          {
+              trace('[ChartingState] External chart invalid: ' + Std.string(e));
+          }
+      }
+      #end
+  
+      PlayState.SONG = Song.loadFromJson(song.toLowerCase(), song.toLowerCase());
+      LoadingState.loadAndSwitchState(new ChartingState());
+  }
 
 	function loadAutosave():Void
 	{
@@ -1482,23 +1575,38 @@ class ChartingState extends MusicBeatState
 	}
 
 	private function saveLevel()
-	{
-		var json = {
-			"song": _song
-		};
+{
+    var json = {
+        "song": _song
+    };
 
-		var data:String = Json.stringify(json);
+    var data:String = Json.stringify(json);
 
-		if ((data != null) && (data.length > 0))
-		{
-			_file = new FileReference();
-			_file.addEventListener(Event.COMPLETE, onSaveComplete);
-			_file.addEventListener(Event.CANCEL, onSaveCancel);
-			_file.addEventListener(IOErrorEvent.IO_ERROR, onSaveError);
-			_file.save(data.trim(), _song.song.toLowerCase() + ".json");
-		}
-	}
+    if (data == null || data.length == 0)
+        return;
 
+    #if mobile
+    if (!AndroidStorage.available)
+    {
+        AndroidStorage.startPermissionFlow();
+        trace('[ChartingState] External storage not ready. Grant access and press Save again.');
+        return;
+    }
+
+    if (AndroidStorage.writeChart(_song.song, data.trim()))
+        trace('[ChartingState] Chart saved to KadeEngine/mods/data/' + _song.song.toLowerCase() + '/' + _song.song.toLowerCase() + '.json');
+    else
+        trace('[ChartingState] Could not save chart to external storage.');
+    #else
+    _file = new FileReference();
+    _file.addEventListener(Event.COMPLETE, onSaveComplete);
+    _file.addEventListener(Event.CANCEL, onSaveCancel);
+    _file.addEventListener(IOErrorEvent.IO_ERROR, onSaveError);
+    _file.save(data.trim(), _song.song.toLowerCase() + '.json');
+    #end
+}
+
+  #if !mobile
 	function onSaveComplete(_):Void
 	{
 		_file.removeEventListener(Event.COMPLETE, onSaveComplete);
@@ -1530,4 +1638,5 @@ class ChartingState extends MusicBeatState
 		_file = null;
 		FlxG.log.error("Problem saving Level data");
 	}
+  #end
 }
