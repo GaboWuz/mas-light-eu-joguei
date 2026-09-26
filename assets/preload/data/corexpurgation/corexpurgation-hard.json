@@ -1,0 +1,15 @@
+{
+	"song": {
+		"player1": "bf",
+		"gfVersion": "gf",
+		"notes": [],
+		"events": [],
+		"player2": "dad",
+		"song": "sixxey",
+		"needsVoices": true,
+		"stage": "halloween",
+		"validScore": true,
+		"bpm": 137,
+		"speed": 2.5
+	}
+}
