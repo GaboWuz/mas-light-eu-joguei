@@ -96,12 +96,11 @@
 	<!--In case you want to use the ui package-->
 	<haxelib name="flixel-ui" />
 	<haxelib name="newgrounds"/>
+  <haxelib name="android-manager" if="android"/>
 	<haxelib name="faxe" if='switch'/>
 	<!-- <haxelib name="polymod"/> -->
 	<haxelib name="discord_rpc" if="windows"/>
 	<haxelib name="linc_luajit" if="windows"/>
-
-  <haxelib name="android-manager" if="android"/>
 
 	<!-- <haxelib name="hxcpp-debug-server" if="desktop"/> -->
 
@@ -144,14 +143,11 @@
 	<haxedef name="NAPE_RELEASE_BUILD" unless="debug" />
 	
 	<!-- _________________________________ Android Stuff _______________________________ -->
-	<section if="android">
-		<config>
-			<android target-sdk-version="29"/>
-      <android permission="android.permission.READ_EXTERNAL_STORAGE"/>
-      <android permission="android.permission.WRITE_EXTERNAL_STORAGE"/>
-      <android permission="android.permission.MANAGE_EXTERNAL_STORAGE"/>
-		</config>
-	</section>
+	
+	<config:android target-sdk-version="28" if="android" />
+	<config:android permission="android.permission.READ_EXTERNAL_STORAGE" if="android" />
+	<config:android permission="android.permission.WRITE_EXTERNAL_STORAGE" if="android" />
+	<config:android permission="android.permission.MANAGE_EXTERNAL_STORAGE" if="android" />
 
 	<haxedef name="HXCPP_CHECK_POINTER" />
 	<haxedef name="HXCPP_STACK_LINE" />
