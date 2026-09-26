@@ -983,17 +983,6 @@ class ChartingState extends MusicBeatState
 			}
 		}
 
-    #if mobile
-    if (controls.BACK)
-    {
-        FlxG.sound.music.stop();
-        if (vocals != null)
-            vocals.stop();
-        FlxG.switchState(new MainMenuState());
-        return;
-    }
-    #end
-
 		if (!typingShit.hasFocus)
 		{
 
