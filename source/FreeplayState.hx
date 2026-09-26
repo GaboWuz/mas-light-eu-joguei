@@ -45,6 +45,10 @@ class FreeplayState extends MusicBeatState
 			songs.push(new SongMetadata(data[0], Std.parseInt(data[2]), data[1]));
 		}
 
+		#if mobile
+		addExternalCharts();
+		#end
+
 		/* 
 			if (FlxG.sound.music != null)
 			{
@@ -224,6 +228,37 @@ class FreeplayState extends MusicBeatState
 			LoadingState.loadAndSwitchState(new PlayState());
 		}
 	}
+
+	#if mobile
+	/**
+	 * Charts saved by the Chart Editor (KadeEngine/charts) that are not in
+	 * freeplaySonglist.txt, as long as the song audio exists in the APK.
+	 */
+	function addExternalCharts():Void
+	{
+		var known:Array<String> = [];
+
+		for (song in songs)
+			known.push(StringTools.replace(song.songName, " ", "-").toLowerCase());
+
+		for (chart in AndroidStorage.listCharts())
+		{
+			var key:String = StringTools.replace(chart, " ", "-").toLowerCase();
+
+			if (known.indexOf(key) != -1 || !openfl.utils.Assets.exists(Paths.inst(key)))
+				continue;
+
+			var character:String = 'dad';
+			var chartData:Song.SwagSong = Song.loadExternal(key);
+
+			if (chartData != null && chartData.player2 != null && chartData.player2 != "")
+				character = chartData.player2;
+
+			known.push(key);
+			songs.push(new SongMetadata(chart, 1, character));
+		}
+	}
+	#end
 
 	function changeDiff(change:Int = 0)
 	{

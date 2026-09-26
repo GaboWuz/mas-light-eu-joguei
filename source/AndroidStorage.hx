@@ -18,7 +18,7 @@ using StringTools;
  * External storage used ONLY by the Chart Editor.
  *
  * Android:
- *   /storage/emulated/0/KadeshEngine/charts/
+ *   /storage/emulated/0/KadeEngine/charts/
  *
  * This is intentionally NOT a mods system.
  */
@@ -33,14 +33,14 @@ class AndroidStorage
         #if android
         try
         {
-            rootPath = Environment.getExternalStorageDirectory() + "/KadeshEngine";
+            rootPath = Environment.getExternalStorageDirectory() + "/KadeEngine";
         }
         catch (e:Dynamic)
         {
-            rootPath = "/storage/emulated/0/KadeshEngine";
+            rootPath = "/storage/emulated/0/KadeEngine";
         }
         #elseif mobile
-        rootPath = "/storage/emulated/0/KadeshEngine";
+        rootPath = "/storage/emulated/0/KadeEngine";
         #else
         rootPath = "";
         #end
@@ -136,7 +136,8 @@ class AndroidStorage
         if (name == null || name.trim() == "")
             name = "chart";
 
-        var result = name;
+        var result = name.trim().toLowerCase();
+        result = StringTools.replace(result, " ", "-");
         result = StringTools.replace(result, "/", "_");
         result = StringTools.replace(result, "\\", "_");
         result = StringTools.replace(result, ":", "_");
@@ -183,6 +184,40 @@ class AndroidStorage
 
             return false;
         }
+    }
+
+    /** Song names (file names without .json) of every chart saved in chartsPath. */
+    public static function listCharts():Array<String>
+    {
+        var result:Array<String> = [];
+
+        if (!init())
+            return result;
+
+        try
+        {
+            for (file in FileSystem.readDirectory(chartsPath))
+            {
+                if (!file.endsWith(".json"))
+                    continue;
+
+                var name = file.substr(0, file.length - 5);
+
+                if (name.trim() != "" && !FileSystem.isDirectory(chartsPath + "/" + file))
+                    result.push(name);
+            }
+        }
+        catch (e:Dynamic)
+        {
+            return result;
+        }
+
+        result.sort(function(a:String, b:String):Int
+        {
+            return a < b ? -1 : (a > b ? 1 : 0);
+        });
+
+        return result;
     }
 
     public static function readChart(song:String):String

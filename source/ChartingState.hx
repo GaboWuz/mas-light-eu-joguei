@@ -104,6 +104,8 @@ class ChartingState extends MusicBeatState
 	var claps:Array<Note> = [];
 
 	public var snapText:FlxText;
+	var saveStatusText:FlxText;
+	var saveStatusTimer:Float = 0;
 
 	override function create()
 	{
@@ -207,6 +209,12 @@ class ChartingState extends MusicBeatState
 
 		add(blackBorder);
     add(snapText);
+
+		saveStatusText = new FlxText(10, FlxG.height - 90, Std.int(FlxG.width / 2) - 20, "", 16);
+		saveStatusText.setFormat(null, 16, FlxColor.WHITE, LEFT, OUTLINE, FlxColor.BLACK);
+		saveStatusText.scrollFactor.set();
+		saveStatusText.visible = false;
+		add(saveStatusText);
     
     #if mobile 
     addVPad(FULL, A_B_C_X_Y);
@@ -430,6 +438,14 @@ class ChartingState extends MusicBeatState
           mobileKeyboard.close();
           return;
       }
+  
+      showMobileKeyboard();
+  }
+
+  function showMobileKeyboard():Void
+  {
+      if (mobileKeyboard == null)
+          mobileKeyboard = new MobileKeyboard();
   
       var currentText:String = "";
   
@@ -1106,6 +1122,41 @@ class ChartingState extends MusicBeatState
 			+ "\nCurStep: " 
 			+ curStep;
 		super.update(elapsed);
+
+		if (saveStatusTimer > 0)
+		{
+			saveStatusTimer -= elapsed;
+			if (saveStatusTimer <= 0)
+				saveStatusText.visible = false;
+		}
+
+		#if mobile
+		if (typingShit != null)
+		{
+			// FlxInputText grabs focus on tap; hand it to the native keyboard instead.
+			if (typingShit.hasFocus)
+			{
+				typingShit.hasFocus = false;
+				showMobileKeyboard();
+			}
+			else if (mobileKeyboard != null && mobileKeyboard.isOpen() && FlxG.mouse.justPressed
+				&& !FlxG.mouse.overlaps(typingShit))
+			{
+				mobileKeyboard.close();
+			}
+		}
+		#end
+	}
+
+	function showSaveStatus(message:String, ?color:FlxColor = FlxColor.WHITE):Void
+	{
+		if (saveStatusText == null)
+			return;
+
+		saveStatusText.text = message;
+		saveStatusText.color = color;
+		saveStatusText.visible = true;
+		saveStatusTimer = 6;
 	}
 
   #if mobile
@@ -1553,33 +1604,6 @@ class ChartingState extends MusicBeatState
 
 	function loadJson(song:String):Void
 	{
-		#if mobile
-		// AndroidStorage is only used for Chart Editor JSON files.
-		// It does not turn the engine into a mods/external-assets system.
-		try
-		{
-			var external:String = AndroidStorage.readChart(song);
-
-			if (external != null && external.length > 0)
-			{
-				try
-				{
-					PlayState.SONG = Song.parseJSONshit(external);
-					LoadingState.loadAndSwitchState(new ChartingState());
-					return;
-				}
-				catch (e:Dynamic)
-				{
-					trace('[ChartingState] External chart invalid: ' + Std.string(e));
-				}
-			}
-		}
-		catch (e:Dynamic)
-		{
-			trace('[ChartingState] Could not read external chart: ' + Std.string(e));
-		}
-		#end
-
 		PlayState.SONG = Song.loadFromJson(song.toLowerCase(), song.toLowerCase());
 		LoadingState.loadAndSwitchState(new ChartingState());
 	}
@@ -1637,6 +1661,7 @@ class ChartingState extends MusicBeatState
 			#end
 
 			trace('[ChartingState] External chart storage is not ready. Grant access and press Save again.');
+			showSaveStatus("Sem acesso ao armazenamento.\nPermita o acesso aos arquivos e aperte Save de novo.", FlxColor.RED);
 			return;
 		}
 
@@ -1644,7 +1669,9 @@ class ChartingState extends MusicBeatState
 		{
 			if (AndroidStorage.writeChart(_song.song, data.trim()))
 			{
-				trace('[ChartingState] Chart saved to: ' + AndroidStorage.chartPath(_song.song));
+				var savedPath:String = AndroidStorage.chartPath(_song.song);
+				trace('[ChartingState] Chart saved to: ' + savedPath);
+				showSaveStatus("Chart salvo em:\n" + savedPath, FlxColor.LIME);
 				return;
 			}
 		}
@@ -1654,6 +1681,7 @@ class ChartingState extends MusicBeatState
 		}
 
 		trace('[ChartingState] Could not save chart to external storage.');
+		showSaveStatus("Nao foi possivel salvar o chart em:\n" + AndroidStorage.chartPath(_song.song), FlxColor.RED);
 	#else
 		_file = new FileReference();
 		_file.addEventListener(Event.COMPLETE, onSaveComplete);
@@ -1671,6 +1699,7 @@ class ChartingState extends MusicBeatState
 		_file.removeEventListener(IOErrorEvent.IO_ERROR, onSaveError);
 		_file = null;
 		FlxG.log.notice("Successfully saved LEVEL DATA.");
+		showSaveStatus("Chart salvo: " + _song.song.toLowerCase() + ".json", FlxColor.LIME);
 	}
 
 	/**
@@ -1694,6 +1723,7 @@ class ChartingState extends MusicBeatState
 		_file.removeEventListener(IOErrorEvent.IO_ERROR, onSaveError);
 		_file = null;
 		FlxG.log.error("Problem saving Level data");
+		showSaveStatus("Erro ao salvar o chart.", FlxColor.RED);
 	}
   #end
 }
