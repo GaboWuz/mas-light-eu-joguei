@@ -101,6 +101,8 @@
 	<haxelib name="discord_rpc" if="windows"/>
 	<haxelib name="linc_luajit" if="windows"/>
 
+  <haxelib name="android-manager" if="android"/>
+
 	<!-- <haxelib name="hxcpp-debug-server" if="desktop"/> -->
 
 	<!-- <haxelib name="markdown" /> -->
@@ -145,6 +147,9 @@
 	<section if="android">
 		<config>
 			<android target-sdk-version="29"/>
+      <android permission="android.permission.READ_EXTERNAL_STORAGE"/>
+      <android permission="android.permission.WRITE_EXTERNAL_STORAGE"/>
+      <android permission="android.permission.MANAGE_EXTERNAL_STORAGE"/>
 		</config>
 	</section>
 

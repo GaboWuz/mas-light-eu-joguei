@@ -58,6 +58,12 @@
       "url": "https://github.com/Aidan63/linc_discord-rpc"
     },
     {
+      "name": "android-manager",
+      "type": "git",
+      "ref": "main",
+      "url": "https://github.com/GaboWuz/android-manager-quemsoueu"
+    }, 
+    {
       "name": "linc_luajit",
       "type": "git",
       "ref": "master",
